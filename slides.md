@@ -53,7 +53,7 @@ big pulls: micropython, cerberus
 ---
 
     !python
-    f = open("yoba.txt", "w")
+    f = open("file.txt", "w")
     f.write("foo")
 
 # Presenter Notes
@@ -66,7 +66,7 @@ big pulls: micropython, cerberus
 ---
 
     !python
-    f = open("yoba.txt", "w")
+    f = open("file.txt", "w")
     f.write("foo")
     f.close()
 
@@ -81,7 +81,7 @@ big pulls: micropython, cerberus
     import os
     import signal
 
-    f = open("yoba.txt", "w")
+    f = open("file.txt", "w")
     f.write("foo")
     # time
     os.kill(os.getpid(), signal.SIGKILL)
@@ -136,7 +136,7 @@ time - какая-то работа программы
             self.f.close()
 
 
-    with File("yoba.txt", "w") as f:
+    with File("file.txt", "w") as f:
         f.write("foo")
 
 # Presenter Notes
@@ -151,7 +151,7 @@ time - какая-то работа программы
 # Context manager
 
     !python
-    with open("yoba.txt", "w") as f:
+    with open("file.txt", "w") as f:
         f.write("foo")
 
 # Presenter Notes
@@ -165,7 +165,7 @@ time - какая-то работа программы
 
     !python
     from pathlib import Path
-    Path("yoba.txt").write_text("foo")
+    Path("file.txt").write_text("foo")
 
 * read_text
 * write_text
