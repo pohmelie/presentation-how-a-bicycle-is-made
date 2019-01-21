@@ -381,6 +381,14 @@ StopIteration скажет питону что мы всё
 
 # Обзор magic methods
 * callable (`__call__`)
+#
+    !python
+    class A:
+        def __call__(self):
+            return "foobar"
+
+    a = A()
+    assert a() == "foobar"
 
 # Presenter Notes
 чтобы использовать инстанс/объект как функцию
@@ -390,9 +398,19 @@ StopIteration скажет питону что мы всё
 # Обзор magic methods
 * callable (`__call__`)
 * item access (`__getitem__`, `__setitem__`, ...)
+#
+    !python
+    class A:
+        def __getitem__(self, key):
+            return key * 2
+
+    a = A()
+    assert a[2] == 4
 
 # Presenter Notes
 мимикрировать под коллекцию
+
+некоторые magic методы имеют фиксированные аргументы, некоторые нет
 
 ---
 
@@ -400,11 +418,21 @@ StopIteration скажет питону что мы всё
 * callable (`__call__`)
 * item access (`__getitem__`, `__setitem__`, ...)
 * attribute access (`__getattr__`, `__setattr__`, ...)
+#
+    !python
+    class A:
+        def __getattr__(self, name):
+            return name * 2
+
+    a = A()
+    assert a.foo == "foofoo"
 
 # Presenter Notes
 когда property недостаточно
 
 динамические цепочки для api
+
+очень динамичная вещь, в духе питона, но ide не сможет помочь и документацию не сгенерировать
 
 ---
 
@@ -413,6 +441,18 @@ StopIteration скажет питону что мы всё
 * item access (`__getitem__`, `__setitem__`, ...)
 * attribute access (`__getattr__`, `__setattr__`, ...)
 * comparison (`__lt__`, `__eq__`, ...)
+#
+    !python
+    class A:
+        def __init__(self, x)
+            self.x = x
+
+        def __eq__(self, other):
+            return self.x == other.x
+
+    a = A(1)
+    b = A(1)
+    assert a == b
 
 ---
 
@@ -422,6 +462,20 @@ StopIteration скажет питону что мы всё
 * attribute access (`__getattr__`, `__setattr__`, ...)
 * comparison (`__lt__`, `__eq__`, ...)
 * descriptors (`__get__`, `__set__`, `__set_name__`)
+#
+    !python
+    class D:
+        def __set_name__(self, owner, name):
+            self.name = name
+
+        def __get__(self):
+            return self.name
+
+    class A:
+        var = D()
+
+    a = A()
+    assert a.var == "var"
 
 # Presenter Notes
 как property, только есть свой объект-хранилище
@@ -435,6 +489,17 @@ StopIteration скажет питону что мы всё
 * comparison (`__lt__`, `__eq__`, ...)
 * descriptors (`__get__`, `__set__`, `__set_name__`)
 * arithmetic/binary (`__and__`, `__or__`, `__add__`, `__sub__`, ...)
+#
+    !python
+    class A:
+        def __init__(self, x):
+            self.x = x
+
+        def __add__(self, other):
+            return self.__class__(self.x + other.x)
+
+    a = A(1) + A(2)
+    assert a.x == 3
 
 ---
 
@@ -446,6 +511,9 @@ StopIteration скажет питону что мы всё
 * descriptors (`__get__`, `__set__`, `__set_name__`)
 * arithmetic/binary (`__and__`, `__or__`, `__add__`, `__sub__`, ...)
 * metaclasses (`__new__`, `__init_subclass__`, ...)
+
+
+![hedgehog](images/hedgehog.jpg)
 
 # Presenter Notes
 кастомизация создания класса, нужно очень редко
@@ -461,6 +529,14 @@ StopIteration скажет питону что мы всё
 * arithmetic/binary (`__and__`, `__or__`, `__add__`, `__sub__`, ...)
 * metaclasses (`__new__`, `__init_subclass__`, ...)
 * function-correspond (`__len__`, `__repr__`, `__str__`, `__hash__`, `__bool__`, ...)
+#
+    !python
+    class A:
+        def __len__(self):
+            return 42
+
+    a = A()
+    assert len(a) == 42
 
 # Presenter Notes
 интерфейсы для builtin функций, но не только
