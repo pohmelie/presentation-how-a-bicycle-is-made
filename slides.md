@@ -918,3 +918,287 @@ PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
 4 строчки против 13 не очень-то читаемых magic методов
 
 но(!) важно знать, что это всё не какая-то магия, а просто сахар
+
+что дальше?
+
+---
+
+# Generator-based framework
+
+---
+
+# Generator-based framework
+
+    !python
+    def a():
+        trace("a enter")
+        time.sleep(1)
+        trace("a exit")
+
+    def b():
+        trace("b enter")
+        time.sleep(.5)
+        trace("b middle")
+        time.sleep(.5)
+        trace("b exit")
+
+    a()
+    b()
+
+    # 0.000 a enter
+    # 1.001 a exit
+    # 1.001 b enter
+    # 1.502 b middle
+    # 2.002 b exit
+
+# Presenter Notes
+a и b не могут выполняться одновременно из-за блокирующего вызова
+
+хотя казалось бы, почему бы двум функциям не спать одновременно?
+не ждать данных из сокета одновременно? и т.д.
+
+нам нужен фреймворк, который позволит им использовать sleep конкурентно
+
+---
+
+# Generator-based framework
+
+    !python
+    def a():
+        trace("a enter")
+        yield 1
+        trace("a exit")
+
+    def b():
+        trace("b enter")
+        yield .5
+        trace("b middle")
+        yield .5
+        trace("b exit")
+
+# Presenter Notes
+вот так мы хотим
+
+нужен кто-то, кто будет будет в нужное время инициировать очередную итерацию генератора
+
+напишем простой loop
+
+---
+
+# Generator-based framework
+
+    !python
+    def a():
+        trace("a enter")
+        yield 1
+        trace("a exit")
+
+    def b():
+        trace("b enter")
+        yield .5
+        trace("b middle")
+        yield .5
+        trace("b exit")
+
+    def run(*gens):
+        wakes = {g: 0 for g in gens}
+        while wakes:
+            g = min(wakes, key=lambda g: wakes[g])
+            time.sleep(max(0, wakes[g] - time.time()))
+            try:
+                wakes[g] = time.time() + next(g)
+            except StopIteration:
+                wakes.pop(g)
+    run(a(), b())
+
+# Presenter Notes
+принцип работы
+
+аналогия с asyncio
+
+---
+
+# Generator-based framework
+
+    !python
+    def a():
+        trace("a enter")
+        yield 1
+        trace("a exit")
+
+    def b():
+        trace("b enter")
+        yield .5
+        trace("b middle")
+        yield .5
+        trace("b exit")
+
+    run(a(), b())
+
+    # 0.000 a enter
+    # 0.000 b enter
+    # 0.500 b middle
+    # 1.001 a exit
+    # 1.001 b exit
+
+# Presenter Notes
+асинхронный фреймворк готов!
+
+проверим что с yield from всё будет работать так, как мы того ожидаем
+
+---
+
+# Generator-based framework
+
+    !python
+    def a():
+        trace("a enter")
+        yield 1
+        trace("a exit")
+        return "a result"
+
+    def b():
+        trace("b enter")
+        yield .5
+        trace("b middle")
+        result = yield from a()
+        trace(f"a result is {result!r}")
+        yield .5
+        trace("b exit")
+    run(b())
+
+    # 0.000 b enter
+    # 0.501 b middle
+    # 0.501 a enter
+    # 1.502 a exit
+    # 1.502 a result is 'a result'
+    # 2.002 b exit
+
+# Presenter Notes
+на месте a() располагаются вызовы к вашим любимым библиотекам: aiohttp, asyncpg, etc.
+
+---
+
+# Что дальше?
+
+![what-next](images/what-next.jpg)
+
+---
+
+* async/await
+#
+    !python
+    async def foo():
+        await bar()
+
+# Presenter Notes
+в один прекрасный момент (python 3.5) было решено добавить ключевые слова async/await,
+при этом суть не изменилась, просто более приятные и понятные названия
+
+жёсткая пометка что это корутина, а не по наличию yield или декоратору
+
+---
+
+* async/await
+* async iterator
+#
+    !python
+    class AIterator:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            # some async code
+
+    async for v in AIterator():
+        ...
+
+# Presenter Notes
+такие же методы только с приставкой "a"
+
+обратите внимание, что aiter это обычная функция
+
+---
+
+* async/await
+* async iterator
+* async context manager
+#
+    !python
+    class AContext:
+        async def __aenter__(self):
+            # some async code
+
+        async def __aexit__(self, *exc_info):
+            # some async code
+
+    async with AContext() as resource:
+        ...
+
+# Presenter Notes
+такие же методы только с приставкой "a"
+
+---
+
+* async/await
+* async iterator
+* async context manager
+* async generator (asend, athrow, aclose)
+#
+    !python
+    async def foo():
+        for i in range(10):
+            v = await bar()
+            yield v
+
+    async for v in foo():
+        ...
+
+# Presenter Notes
+такие же методы только с приставкой "a"
+
+нельзя yield в finally
+
+cleanup не может выполняться вне лупа
+
+---
+
+* async/await
+* async iterator
+* async context manager
+* async generator (asend, athrow, aclose)
+#
+    !python
+    # python 3.7+
+
+    @contextlib.asynccontextmanager
+    async def foo():
+        resource = await initialize()
+        try:
+            yield resource
+        finally:
+            await finalize(resource)
+
+    async with foo() as resource:
+        ...
+
+# Presenter Notes
+в 3.7 добавили асинхронный контекстный менеджер
+
+если добавить `yield from`, то можно будет делать фреймворки на асинхронных генераторах, это повторит
+историю asyncio но только уже внутри самого asyncio.
+
+---
+
+![deeper](images/deeper.jpg)
+
+# Presenter Notes
+какой в этом смысл?
+
+---
+
+![вам-не-понять](images/вам-не-понять.jpg)
+
+---
+
+# Вопросы
