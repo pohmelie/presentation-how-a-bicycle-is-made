@@ -541,6 +541,8 @@ StopIteration скажет питону что мы всё
 # Presenter Notes
 интерфейсы для builtin функций, но не только
 
+например, `__bool__` вызывается в if
+
 ---
 
 # Обзор magic methods
@@ -553,3 +555,366 @@ StopIteration скажет питону что мы всё
 * metaclasses (`__new__`, `__init_subclass__`, ...)
 * function-correspond (`__len__`, `__repr__`, `__str__`, `__hash__`, `__bool__`, ...)
 * https://docs.python.org/3/reference/datamodel.html#special-method-names
+
+---
+
+# Generator
+
+---
+
+# Generator
+
+    !python
+    def fib(n):
+        ns = []
+        a, b = 0, 1
+        for _ in range(n):
+            ns.append(a)
+            a, b = b, a + b
+        return ns
+
+    for x in fib(10):
+        print(x)
+
+# Presenter Notes
+n-первых чисел фибоначчи
+
+классический энергичный/неленивый подход
+
+недостатки: получим все числа сразу, память,
+вызывающий заблокирован пока не будет составлен весь список чисел
+
+---
+
+# Generator
+
+    !python
+    class Fib:
+        def __init__(self, n):
+            self.n = n
+            self.a, self.b = 0, 1
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            if not self.n:
+                raise StopIteration()
+            self.n -= 1
+            v = self.a
+            self.a, self.b = self.b, self.a + self.b
+            return v
+
+
+    for x in Fib(10):
+        print(x)
+
+# Presenter Notes
+можно написать итератор
+
+нет проблем с памятью, нет блокировки
+
+но... некрасиво, шумно, логика не очень хорошо читается
+
+можно заменить 5 строчками...
+
+---
+
+# Generator
+
+    !python
+    def fib(n):
+        a, b = 0, 1
+        for _ in range(n):
+            yield a
+            a, b = b, a + b
+
+    for x in fib(10):
+        print(x)
+
+# Presenter Notes
+объяснить флоу
+
+это пример генератора, который используется как итератор, но у генератора есть дополнительные
+свойства, которых нет у итератора
+
+---
+
+# Generator
+
+    !python
+    def gen():  # <-
+        s = 0
+        while True:
+            x = yield s
+            s += x
+
+    g = gen()  # <generator object gen at 0x7fb8cfbfb7d8>
+
+
+# Presenter Notes
+объект-генератор создан, но код ещё не выполнялся
+
+`__next__`, `send`, `throw`, `close`
+
+---
+
+# Generator
+
+    !python
+    def gen():
+        s = 0
+        while True:
+            x = yield s  # <-
+            s += x
+
+    g = gen()
+    assert g.send(None) == 0
+
+# Presenter Notes
+первый send не попадёт в x, а только дойдёт до yield
+
+---
+
+# Generator
+
+    !python
+    def gen():
+        s = 0
+        while True:
+            x = yield s  # <-
+            s += x
+
+    g = gen()
+    assert g.send(None) == 0
+    assert g.send(1) == 1
+    assert g.send(2) == 3
+    assert g.send(3) == 6
+
+# Presenter Notes
+флоу
+
+---
+
+# Generator
+
+    !python
+    def gen():
+        s = 0
+        while True:
+            x = yield s  # <-
+            s += x
+
+    g = gen()
+    assert g.send(None) == 0
+    assert g.send(1) == 1
+    assert g.send(2) == 3
+    assert g.send(3) == 6
+    g.close()
+
+# Presenter Notes
+генератор можно остановить (бросить исключение GeneratorExit внутрь)
+
+---
+
+# Generator
+
+    !python
+    def gen():
+        s = 0
+        while True:
+            x = yield s  # <-
+            s += x
+
+    g = gen()
+    assert g.send(None) == 0
+    assert g.send(1) == 1
+    assert g.send(2) == 3
+    assert g.send(3) == 6
+    g.throw(Exception("FOO"))
+
+# Presenter Notes
+можно бросить кастомной исключение
+
+---
+
+# Generator
+
+    !python
+    def gen():
+        s = 0
+        while True:
+            try:
+                x = yield s
+            except Exception:
+                break
+            s += x
+
+    g = gen()
+    assert g.send(None) == 0
+    assert g.send(1) == 1
+    assert g.send(2) == 3
+    assert g.send(3) == 6
+    g.throw(Exception("FOO"))
+
+# Presenter Notes
+генератор может обработать исключение
+
+давайте объединим генератор, декоратор и контекстный менеджер!
+
+---
+
+# Generator
+
+    !python
+    import contextlib
+
+    @contextlib.contextmanager
+    def context(name, mode="r"):
+        f = open(name, mode)
+        try:
+            yield f
+        finally:
+            f.close()
+
+    with context("file.txt", "w") as f:
+        f.write("foo")
+
+# Presenter Notes
+объяснить все элементы
+
+что хорошо: понятный флоу без коллбеков, логика отделена от интерфейса контекстного менеджера декоратором
+
+но и это ещё не всё!
+
+---
+
+# Generator
+
+PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
+
+# Presenter Notes
+в далёком 2009 году Gregory Ewing придумал то, что позволило в последствии появиться целому семейству библиотек
+использующих неблокирующие операции и сейчас это целое направление в разработке на пифоне
+
+кто-нибудь слышал о tornado?
+
+угадайте в каком году был первый релиз... 2009
+
+так что же он придумал?
+
+---
+
+# Generator
+
+PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
+
+    !python
+    def gen1():
+        yield 1
+        yield 2
+        return 3
+
+    def gen2():
+        value = yield from gen1()
+        assert value == 3
+
+    for x in gen2():
+        print(x)
+    # 1
+    # 2
+
+# Presenter Notes
+что даёт?
+
+стек генераторов, механизм абстракции схожий с функциями
+
+что сделает send?
+
+---
+
+# Generator
+
+PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
+
+    !python
+    def gen1():
+        yield 1
+        yield 2
+        return 3
+
+    def gen2():
+        value = yield from gen1()
+        assert value == 3
+
+    g = gen2()
+    assert g.send(None) == 1
+    assert g.send(None) == 2
+
+# Presenter Notes
+всё как ожидается, значения доходят до того, кто сделал yield (gen1)
+
+как работает return?
+
+---
+
+# Generator
+
+PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
+
+    !python
+    def gen1():
+        yield 1
+        yield 2
+        raise StopIteration(3)
+
+    def gen2():
+        value = yield from gen1()
+        assert value == 3
+
+    for x in gen2():
+        print(x)
+    # 1
+    # 2
+
+# Presenter Notes
+а значит можно написать класс, который будет себя вести как генератор и который
+можно использовать в yield from
+
+генераторы — очередной очень полезный сахар, который при этом вписывается в объектную модель питона
+и может быть заменён на слегка необычный класс
+
+---
+
+# Generator
+
+PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
+
+    !python
+    class gen1:
+        def __init__(self):
+            self.v = 1
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            if self.v > 2:
+                raise StopIteration(3)
+            v = self.v
+            self.v += 1
+            return v
+
+    def gen2():
+        value = yield from gen1()
+        assert value == 3
+
+    for x in gen2():
+        print(x)
+    # 1
+    # 2
+
+# Presenter Notes
+4 строчки против 13 не очень-то читаемых magic методов
+
+но(!) важно знать, что это всё не какая-то магия, а просто сахар
