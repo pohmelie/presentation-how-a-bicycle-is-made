@@ -57,7 +57,9 @@ big pulls: micropython, cerberus
     f.write("foo")
 
 # Presenter Notes
-что не так?
+этот код отработает как ожидается, но что не так?
+
+почему он работает?
 
 кто-то забудет close и не заметит, потому что при уничтожении вызовется close
 
@@ -83,12 +85,10 @@ big pulls: micropython, cerberus
 
     f = open("file.txt", "w")
     f.write("foo")
-    # time
+    # work
     os.kill(os.getpid(), signal.SIGKILL)
 
 # Presenter Notes
-time - какая-то работа программы
-
 текст не попадёт в файл из-за буферизации
 
 какие идеи?
@@ -106,9 +106,8 @@ time - какая-то работа программы
 # Context manager
 
 # Presenter Notes
-создатели решили не отключать буферизацию а
-
-"да, это частая задача, инициализировать ресурс, использовать и финализировать"
+создатели решили не отключать буферизацию а что это частая задача:
+инициализировать ресурс, использовать и финализировать
 
 ---
 
@@ -371,6 +370,33 @@ StopIteration скажет питону что мы всё
 
     for x in Countdown(5):
         # work
+
+---
+
+# Iterator
+
+    !python
+    class Countdown:
+        def __init__(self, n):
+            self.n = n
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            if self.n == 0:
+                raise StopIteration()
+            v = self.n
+            self.n -= 1
+            return v
+
+    o = Countdown(5)
+    it = iter(o)
+    assert it is o
+    next(it)  # 5
+
+# Presenter Notes
+можно вручную вызывать эти методы с помощью одноимённых builtin функций
 
 ---
 
@@ -639,6 +665,8 @@ n-первых чисел фибоначчи
 # Presenter Notes
 объяснить флоу
 
+у генератора есть `__iter__` (который возвращает сам себя как на прошлом слайде) и `__next__` (как у итератора)
+
 это пример генератора, который используется как итератор, но у генератора есть дополнительные
 свойства, которых нет у итератора
 
@@ -659,7 +687,7 @@ n-первых чисел фибоначчи
 # Presenter Notes
 объект-генератор создан, но код ещё не выполнялся
 
-`__next__`, `send`, `throw`, `close`
+помимо `__iter__` и `__next__` есть `send`, `throw`, `close`
 
 ---
 
@@ -934,6 +962,12 @@ PEP380 — Syntax for Delegating to a Subgenerator (Python 3.3)
 
 # Generator-based framework
 
+# Presenter Notes
+что это? и почему это нас должно интересовать?
+
+все существующие фреймворки: asyncio, trio, curio, tornado (со своим лупом) работают по принципу,
+который мы сейчас рассмотрим
+
 ---
 
 # Generator-based framework
@@ -1027,7 +1061,8 @@ a и b не могут выполняться одновременно из-за
 # Presenter Notes
 принцип работы
 
-аналогия с asyncio
+аналогия с asyncio, только у нас просто next, а на самом деле надо ещё отправлять ответ:
+байты из сокета, эксепшены и т.д.
 
 ---
 
@@ -1057,44 +1092,34 @@ a и b не могут выполняться одновременно из-за
 # Presenter Notes
 асинхронный фреймворк готов!
 
-проверим что с yield from всё будет работать так, как мы того ожидаем
+в реальных фреймворках yield спрятаны во вспомогательные генераторы и пользователь использует yield from
 
 ---
 
 # Generator-based framework
 
     !python
-    def a():
-        trace("a enter")
-        yield 1
-        trace("a exit")
-        return "a result"
+    def sleep(t):
+        trace("sleep enter")
+        v = yield t
+        trace("sleep exit")
+        return v
 
-    def b():
-        trace("b enter")
-        yield .5
-        trace("b middle")
-        result = yield from a()
-        trace(f"a result is {result!r}")
-        yield .5
-        trace("b exit")
-    run(b())
+    def foo():
+        trace("foo enter")
+        result = yield from sleep(1)
+        assert result is None
+        trace("foo exit")
 
-    # 0.000 b enter
-    # 0.501 b middle
-    # 0.501 a enter
-    # 1.502 a exit
-    # 1.502 a result is 'a result'
-    # 2.002 b exit
+    run(foo())
+
+    # 0.000 foo enter
+    # 0.000 sleep enter
+    # 1.001 sleep exit
+    # 1.001 foo exit
 
 # Presenter Notes
-почему 2 секунды?
-
 это практически asyncio!
-
-почему в asyncio yield from а у нас тут yield?
-
-на месте a() располагаются вызовы к вашим любимым асинхронным библиотекам: aiohttp, asyncpg, etc.
 
 ---
 
@@ -1216,7 +1241,7 @@ cleanup не может выполняться вне лупа
 
 ---
 
-![вам-не-понять](images/вам-не-понять.jpg)
+![idk](images/idk.png)
 
 # Presenter Notes
 это конечно шутка, добавить обычный `yield from` не получится, нужна специальная версия, что-то вроде
@@ -1272,7 +1297,7 @@ cleanup не может выполняться вне лупа
 
 * landslide
 * Роман Силаков
-* David M. Beazley and James Powell
+* David M. Beazley, James Powell, Raymond Hettinger
 
 ---
 
