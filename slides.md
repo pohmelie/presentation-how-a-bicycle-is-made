@@ -1299,6 +1299,8 @@ cleanup не может выполняться вне лупа
 * Роман Силаков
 * David M. Beazley, James Powell, Raymond Hettinger
 
+https://github.com/pohmelie/presentation-how-a-bicycle-is-made
+
 ---
 
 # Вопросы
